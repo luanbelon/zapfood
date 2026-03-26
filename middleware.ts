@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { ADMIN_BASE_PATH, ADMIN_LOGIN_PATH } from "@/lib/admin-path";
 
 const ADMIN_COOKIE = "zapfood_admin";
+const ADMIN_BASE_PATH = "/painel-gestao-loja";
+const ADMIN_LOGIN_PATH = "/painel-gestao-loja/acesso-seguro";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
