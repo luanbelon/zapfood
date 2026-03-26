@@ -8,7 +8,9 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  distDir: ".next-local",
+  // On Vercel we must keep the default ".next" folder.
+  // Locally, we use a different dist dir to avoid Windows file-lock issues.
+  distDir: process.env.VERCEL ? undefined : ".next-local",
 };
 
 export default withPWA(nextConfig);
