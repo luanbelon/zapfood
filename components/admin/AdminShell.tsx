@@ -29,7 +29,7 @@ export function AdminShell({ children, storeName, primaryColor, logoUrl }: Props
           <Link href={ADMIN_BASE_PATH} className="mr-2 flex items-center gap-2 text-zinc-900">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="Logo" className="h-8 w-8 rounded-lg object-cover" />
+              <img src={logoUrl} alt="Logo" className="h-20 w-20 rounded-lg object-cover" />
             ) : null}
             <span style={{ color: primaryColor }}>{storeName}</span>
           </Link>

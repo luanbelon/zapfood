@@ -114,6 +114,41 @@ export function StoreCustomizationManager() {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={settings.logoUrl} alt="Logo preview" className="h-16 w-16 rounded-xl object-cover" />
       ) : null}
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Banner desktop (BG)</span>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () =>
+              setSettings((prev) =>
+                prev ? { ...prev, bannerImageUrl: String(reader.result ?? "") } : prev,
+              );
+            reader.readAsDataURL(file);
+          }}
+          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">ou URL do banner</span>
+        <input
+          value={settings.bannerImageUrl ?? ""}
+          onChange={(e) => setSettings({ ...settings, bannerImageUrl: e.target.value || null })}
+          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+          placeholder="https://..."
+        />
+      </label>
+      {settings.bannerImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={settings.bannerImageUrl}
+          alt="Banner preview"
+          className="h-24 w-full rounded-xl object-cover"
+        />
+      ) : null}
       <div className="flex items-center gap-3">
         <button
           type="button"

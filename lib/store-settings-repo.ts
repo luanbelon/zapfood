@@ -14,6 +14,7 @@ type StoreConfigModel = {
       storeName: string;
       primaryColor: string;
       logoUrl: string | null;
+      bannerImageUrl: string | null;
       openTime: string;
       closeTime: string;
     };
@@ -22,6 +23,7 @@ type StoreConfigModel = {
     storeName: string;
     primaryColor: string;
     logoUrl: string | null;
+    bannerImageUrl: string | null;
     openTime: string;
     closeTime: string;
   }>;
@@ -31,6 +33,7 @@ type StoreConfigModel = {
       storeName: string;
       primaryColor: string;
       logoUrl: string | null;
+      bannerImageUrl: string | null;
       openTime: string;
       closeTime: string;
     };
@@ -38,6 +41,7 @@ type StoreConfigModel = {
     storeName: string;
     primaryColor: string;
     logoUrl: string | null;
+    bannerImageUrl: string | null;
     openTime: string;
     closeTime: string;
   }>;
@@ -48,6 +52,7 @@ function defaultSettings(): StoreSettings {
     storeName: getStoreName(),
     primaryColor: getPrimaryColor(),
     logoUrl: null,
+    bannerImageUrl: null,
     openTime: "09:00",
     closeTime: "22:00",
   };
@@ -94,6 +99,12 @@ export async function updateStoreSettings(
         ? current.logoUrl
         : input.logoUrl?.trim()
           ? input.logoUrl.trim()
+          : null,
+    bannerImageUrl:
+      input.bannerImageUrl === undefined
+        ? current.bannerImageUrl
+        : input.bannerImageUrl?.trim()
+          ? input.bannerImageUrl.trim()
           : null,
     openTime: input.openTime?.trim() || current.openTime,
     closeTime: input.closeTime?.trim() || current.closeTime,

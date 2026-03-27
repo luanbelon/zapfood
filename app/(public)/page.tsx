@@ -31,6 +31,16 @@ export default async function MenuPage() {
           Loja fechada agora. Horario de atendimento: {settings.openTime} as {settings.closeTime}
         </div>
       ) : null}
+      {settings.bannerImageUrl ? (
+        <section className="hidden lg:block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={settings.bannerImageUrl}
+            alt="Banner da loja"
+            className="h-[20vh] w-full rounded-2xl object-cover"
+          />
+        </section>
+      ) : null}
       {promo.length > 0 ? (
         <section className="space-y-3">
           <div className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white">

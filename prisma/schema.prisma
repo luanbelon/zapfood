@@ -45,6 +45,7 @@ model StoreConfig {
   storeName    String
   primaryColor String
   logoUrl      String?
+  bannerImageUrl String?
   openTime     String
   closeTime    String
   createdAt    DateTime @default(now())

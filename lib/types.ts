@@ -13,6 +13,7 @@ export type StoreSettings = {
   storeName: string;
   primaryColor: string;
   logoUrl: string | null;
+  bannerImageUrl: string | null;
   openTime: string;
   closeTime: string;
 };

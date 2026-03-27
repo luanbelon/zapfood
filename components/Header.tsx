@@ -17,7 +17,7 @@ export function Header({ storeName, primaryColor, logoUrl, cartCount }: Props) {
         <Link href="/" className="flex min-w-0 items-center gap-3">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="Logo" className="h-10 w-10 rounded-xl object-cover" />
+            <img src={logoUrl} alt="Logo" className="h-20 w-20 rounded-xl object-cover" />
           ) : null}
           <div className="min-w-0">
           <h1

@@ -27,6 +27,7 @@ export async function PATCH(request: Request) {
     storeName: typeof b.storeName === "string" ? b.storeName : undefined,
     primaryColor: typeof b.primaryColor === "string" ? b.primaryColor : undefined,
     logoUrl: typeof b.logoUrl === "string" ? b.logoUrl : undefined,
+    bannerImageUrl: typeof b.bannerImageUrl === "string" ? b.bannerImageUrl : undefined,
     openTime: typeof b.openTime === "string" ? b.openTime : undefined,
     closeTime: typeof b.closeTime === "string" ? b.closeTime : undefined,
   });
