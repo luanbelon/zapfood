@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     password?: unknown;
     email?: unknown;
     storeCode?: unknown;
+    mode?: unknown;
   };
   const password = String(payload.password ?? "");
   const email = String(payload.email ?? "").trim().toLowerCase();
