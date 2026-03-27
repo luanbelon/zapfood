@@ -39,3 +39,14 @@ model Order {
   itemsJson  String
   createdAt  DateTime @default(now())
 }
+
+model StoreConfig {
+  id           String   @id @default("default")
+  storeName    String
+  primaryColor String
+  logoUrl      String?
+  openTime     String
+  closeTime    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
