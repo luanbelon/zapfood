@@ -1,16 +1,16 @@
-import { isAdminSession } from "@/lib/auth";
+import { getAdminSession } from "@/lib/auth";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store-settings-repo";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  if (!(await isAdminSession())) {
+  if ((await getAdminSession())?.role !== "STORE_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json(await getStoreSettings());
 }
 
 export async function PATCH(request: Request) {
-  if (!(await isAdminSession())) {
+  if ((await getAdminSession())?.role !== "STORE_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   let body: unknown;

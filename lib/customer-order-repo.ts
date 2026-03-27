@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { isDatabaseEnabled } from "@/lib/env";
+import { getCurrentStore } from "@/lib/tenant";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import type { CustomerRecord, SalesSummary } from "@/lib/types";
 type CustomerModel = {
-  findUnique: (args: { where: { phone: string } }) => Promise<unknown>;
+  findFirst: (args: { where: { phone: string; storeId: string } }) => Promise<unknown>;
   upsert: (args: {
-    where: { phone: string };
-    create: { phone: string; name: string; address: string };
+    where: { storeId_phone: { storeId: string; phone: string } };
+    create: { phone: string; name: string; address: string; storeId: string };
     update: { name: string; address: string };
   }) => Promise<{ id: string }>;
 };
@@ -16,13 +17,14 @@ type OrderModel = {
     data: {
       phone: string;
       customerId: string;
+      storeId: string;
       customerName: string;
       address: string;
       total: number;
       itemsJson: string;
     };
   }) => Promise<unknown>;
-  count: (args: { where: { createdAt: { gte: Date } } }) => Promise<number>;
+  count: (args: { where: { createdAt: { gte: Date }; storeId: string } }) => Promise<number>;
 };
 
 
@@ -35,33 +37,37 @@ type OrderInput = {
 };
 
 const globalMem = globalThis as unknown as {
-  zapfoodCustomers?: CustomerRecord[];
-  zapfoodOrders?: Array<{ createdAt: Date }>;
+  zapfoodCustomers?: Record<string, CustomerRecord[]>;
+  zapfoodOrders?: Record<string, Array<{ createdAt: Date }>>;
 };
 
-function customersMem(): CustomerRecord[] {
-  if (!globalMem.zapfoodCustomers) globalMem.zapfoodCustomers = [];
-  return globalMem.zapfoodCustomers;
+function customersMem(storeId: string): CustomerRecord[] {
+  if (!globalMem.zapfoodCustomers) globalMem.zapfoodCustomers = {};
+  if (!globalMem.zapfoodCustomers[storeId]) globalMem.zapfoodCustomers[storeId] = [];
+  return globalMem.zapfoodCustomers[storeId];
 }
 
-function ordersMem(): Array<{ createdAt: Date }> {
-  if (!globalMem.zapfoodOrders) globalMem.zapfoodOrders = [];
-  return globalMem.zapfoodOrders;
+function ordersMem(storeId: string): Array<{ createdAt: Date }> {
+  if (!globalMem.zapfoodOrders) globalMem.zapfoodOrders = {};
+  if (!globalMem.zapfoodOrders[storeId]) globalMem.zapfoodOrders[storeId] = [];
+  return globalMem.zapfoodOrders[storeId];
 }
 
 export async function findCustomerByPhone(phoneRaw: string): Promise<CustomerRecord | null> {
+  const store = await getCurrentStore();
   const phone = normalizeWhatsAppNumber(phoneRaw);
   if (!phone) return null;
   if (isDatabaseEnabled()) {
-    const found = await (db as unknown as { customer: CustomerModel }).customer.findUnique({
-      where: { phone },
+    const found = await (db as unknown as { customer: CustomerModel }).customer.findFirst({
+      where: { phone, storeId: store.id },
     });
     return found as CustomerRecord | null;
   }
-  return customersMem().find((c) => c.phone === phone) ?? null;
+  return customersMem(store.id).find((c) => c.phone === phone) ?? null;
 }
 
 export async function upsertCustomerAndOrder(input: OrderInput): Promise<void> {
+  const store = await getCurrentStore();
   const phone = normalizeWhatsAppNumber(input.phone);
   if (!phone) return;
 
@@ -71,13 +77,14 @@ export async function upsertCustomerAndOrder(input: OrderInput): Promise<void> {
       order: OrderModel;
     };
     const customer = await prismaAny.customer.upsert({
-      where: { phone },
-      create: { phone, name: input.customerName, address: input.address },
+      where: { storeId_phone: { storeId: store.id, phone } },
+      create: { phone, name: input.customerName, address: input.address, storeId: store.id },
       update: { name: input.customerName, address: input.address },
     });
     await prismaAny.order.create({
       data: {
         phone,
+        storeId: store.id,
         customerId: customer.id,
         customerName: input.customerName,
         address: input.address,
@@ -88,7 +95,7 @@ export async function upsertCustomerAndOrder(input: OrderInput): Promise<void> {
     return;
   }
 
-  const mem = customersMem();
+  const mem = customersMem(store.id);
   const existingIdx = mem.findIndex((c) => c.phone === phone);
   const now = new Date();
   if (existingIdx >= 0) {
@@ -103,7 +110,7 @@ export async function upsertCustomerAndOrder(input: OrderInput): Promise<void> {
       updatedAt: now,
     });
   }
-  ordersMem().push({ createdAt: now });
+  ordersMem(store.id).push({ createdAt: now });
 }
 
 function startOfDay(now: Date): Date {
@@ -121,6 +128,7 @@ function startOfMonth(now: Date): Date {
 }
 
 export async function getSalesSummary(now = new Date()): Promise<SalesSummary> {
+  const store = await getCurrentStore();
   const day = startOfDay(now);
   const week = startOfWeek(now);
   const month = startOfMonth(now);
@@ -128,14 +136,14 @@ export async function getSalesSummary(now = new Date()): Promise<SalesSummary> {
   if (isDatabaseEnabled()) {
     const prismaAny = db as unknown as { order: OrderModel };
     const [today, weekCount, monthCount] = await Promise.all([
-      prismaAny.order.count({ where: { createdAt: { gte: day } } }),
-      prismaAny.order.count({ where: { createdAt: { gte: week } } }),
-      prismaAny.order.count({ where: { createdAt: { gte: month } } }),
+      prismaAny.order.count({ where: { createdAt: { gte: day }, storeId: store.id } }),
+      prismaAny.order.count({ where: { createdAt: { gte: week }, storeId: store.id } }),
+      prismaAny.order.count({ where: { createdAt: { gte: month }, storeId: store.id } }),
     ]);
     return { today, week: weekCount, month: monthCount };
   }
 
-  const all = ordersMem();
+  const all = ordersMem(store.id);
   return {
     today: all.filter((o) => o.createdAt >= day).length,
     week: all.filter((o) => o.createdAt >= week).length,

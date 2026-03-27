@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { isDatabaseEnabled } from "@/lib/env";
+import { getCurrentStore } from "@/lib/tenant";
 import type { ProductRecord } from "@/lib/types";
 
 type ProductCreateInput = {
@@ -21,12 +22,15 @@ type ProductUpdateInput = {
 };
 
 const globalForMock = globalThis as unknown as {
-  zapfoodMockProducts?: ProductRecord[];
+  zapfoodMockProducts?: Record<string, ProductRecord[]>;
 };
 
-function getMockStore(): ProductRecord[] {
+function getMockStore(storeId: string): ProductRecord[] {
   if (!globalForMock.zapfoodMockProducts) {
-    globalForMock.zapfoodMockProducts = [
+    globalForMock.zapfoodMockProducts = {};
+  }
+  if (!globalForMock.zapfoodMockProducts[storeId]) {
+    globalForMock.zapfoodMockProducts[storeId] = [
       {
         id: "mock-1",
         name: "X-Burger",
@@ -59,7 +63,7 @@ function getMockStore(): ProductRecord[] {
       },
     ];
   }
-  return globalForMock.zapfoodMockProducts;
+  return globalForMock.zapfoodMockProducts[storeId];
 }
 
 function sortByNewest(items: ProductRecord[]): ProductRecord[] {
@@ -67,22 +71,31 @@ function sortByNewest(items: ProductRecord[]): ProductRecord[] {
 }
 
 export async function listProducts(includeInactive: boolean): Promise<ProductRecord[]> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
     return (await db.product.findMany({
-      where: includeInactive ? undefined : { active: true },
+      where: includeInactive ? { storeId: store.id } : { active: true, storeId: store.id },
       orderBy: { createdAt: "desc" },
     })) as ProductRecord[];
   }
-  const items = getMockStore();
+  const items = getMockStore(store.id);
   const filtered = includeInactive ? items : items.filter((p) => p.active);
   return sortByNewest(filtered);
 }
 
 export async function createProduct(input: ProductCreateInput): Promise<ProductRecord> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
-    return (await db.product.create({ data: input })) as ProductRecord;
+    const currentCount = await db.product.count({ where: { storeId: store.id } });
+    if (currentCount >= 120) {
+      throw new Error("PRODUCT_LIMIT_REACHED");
+    }
+    return (await db.product.create({ data: { ...input, storeId: store.id } })) as ProductRecord;
   }
-  const items = getMockStore();
+  const items = getMockStore(store.id);
+  if (items.length >= 120) {
+    throw new Error("PRODUCT_LIMIT_REACHED");
+  }
   const created: ProductRecord = {
     id: `mock-${Date.now()}`,
     createdAt: new Date(),
@@ -96,14 +109,17 @@ export async function updateProduct(
   id: string,
   input: ProductUpdateInput,
 ): Promise<ProductRecord | null> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
     try {
+      const found = await db.product.findFirst({ where: { id, storeId: store.id } });
+      if (!found) return null;
       return (await db.product.update({ where: { id }, data: input })) as ProductRecord;
     } catch {
       return null;
     }
   }
-  const items = getMockStore();
+  const items = getMockStore(store.id);
   const idx = items.findIndex((p) => p.id === id);
   if (idx === -1) return null;
   items[idx] = { ...items[idx], ...input };
@@ -111,30 +127,34 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
     try {
+      const found = await db.product.findFirst({ where: { id, storeId: store.id } });
+      if (!found) return false;
       await db.product.delete({ where: { id } });
       return true;
     } catch {
       return false;
     }
   }
-  const items = getMockStore();
+  const items = getMockStore(store.id);
   const before = items.length;
-  globalForMock.zapfoodMockProducts = items.filter((p) => p.id !== id);
-  return globalForMock.zapfoodMockProducts.length < before;
+  globalForMock.zapfoodMockProducts[store.id] = items.filter((p) => p.id !== id);
+  return globalForMock.zapfoodMockProducts[store.id].length < before;
 }
 
 export async function countProducts(): Promise<{ total: number; active: number; inactive: number }> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
     const [total, active, inactive] = await Promise.all([
-      db.product.count(),
-      db.product.count({ where: { active: true } }),
-      db.product.count({ where: { active: false } }),
+      db.product.count({ where: { storeId: store.id } }),
+      db.product.count({ where: { active: true, storeId: store.id } }),
+      db.product.count({ where: { active: false, storeId: store.id } }),
     ]);
     return { total, active, inactive };
   }
-  const items = getMockStore();
+  const items = getMockStore(store.id);
   const total = items.length;
   const active = items.filter((p) => p.active).length;
   const inactive = total - active;

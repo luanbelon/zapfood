@@ -1,9 +1,9 @@
-import { isAdminSession } from "@/lib/auth";
+import { getAdminSession } from "@/lib/auth";
 import { createProduct, listProducts } from "@/lib/products-repo";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const admin = await isAdminSession();
+  const admin = (await getAdminSession())?.role === "STORE_ADMIN";
   try {
     const products = await listProducts(admin);
     return NextResponse.json(products);
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdminSession())) {
+  if ((await getAdminSession())?.role !== "STORE_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   let body: unknown;
@@ -58,7 +58,10 @@ export async function POST(request: Request) {
       promoPrice: promoActive ? promoPrice : null,
     });
     return NextResponse.json(product);
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message === "PRODUCT_LIMIT_REACHED") {
+      return NextResponse.json({ error: "Store product limit reached (120)" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }

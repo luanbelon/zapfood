@@ -59,14 +59,15 @@ export default function AdminLoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-400"
         />
-        <label className="mt-3 block text-xs font-medium text-zinc-600">Codigo da loja (4 digitos)</label>
+        <label className="mt-3 block text-xs font-medium text-zinc-600">Codigo da loja (6 alfanumerico)</label>
         <input
           required
-          pattern="\d{4}"
-          maxLength={4}
-          inputMode="numeric"
+          pattern="[A-Za-z0-9]{6}"
+          maxLength={6}
           value={storeCode}
-          onChange={(e) => setStoreCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          onChange={(e) =>
+            setStoreCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
+          }
           className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-400"
         />
         {err ? <p className="mt-2 text-sm text-red-600">{err}</p> : null}

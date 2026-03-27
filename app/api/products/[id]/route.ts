@@ -1,11 +1,11 @@
-import { isAdminSession } from "@/lib/auth";
+import { getAdminSession } from "@/lib/auth";
 import { deleteProduct, updateProduct } from "@/lib/products-repo";
 import { NextResponse } from "next/server";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  if (!(await isAdminSession())) {
+  if ((await getAdminSession())?.role !== "STORE_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await ctx.params;
@@ -69,7 +69,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {
-  if (!(await isAdminSession())) {
+  if ((await getAdminSession())?.role !== "STORE_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await ctx.params;

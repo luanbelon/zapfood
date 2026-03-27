@@ -7,29 +7,70 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AdminRole {
+  MASTER
+  STORE_ADMIN
+}
+
+model Store {
+  id         String      @id @default(cuid())
+  name       String
+  code       String      @unique
+  subdomain  String      @unique
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  products   Product[]
+  customers  Customer[]
+  orders     Order[]
+  admins     AdminUser[]
+  config     StoreConfig?
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String
+  passwordHash String
+  role         AdminRole
+  storeId      String?
+  store        Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([email, role, storeId])
+}
+
 model Product {
   id          String   @id @default(cuid())
   name        String
   price       Float
   image       String?
-  active    Boolean  @default(true)
+  active      Boolean  @default(true)
   promoActive Boolean @default(false)
   promoPrice   Float?
+  storeId     String?
+  store       Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 }
 
 model Customer {
   id        String   @id @default(cuid())
-  phone     String   @unique
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  phone     String
   name      String
   address   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+
+  @@unique([storeId, phone])
 }
 
 model Order {
   id         String   @id @default(cuid())
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   phone      String
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -41,7 +82,9 @@ model Order {
 }
 
 model StoreConfig {
-  id           String   @id @default("default")
+  id           String   @id @default(cuid())
+  storeId      String?  @unique
+  store        Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   storeName    String
   primaryColor String
   logoUrl      String?

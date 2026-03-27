@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getPrimaryColor, getStoreName } from "@/lib/env";
 import { isDatabaseEnabled } from "@/lib/env";
+import { getCurrentStore } from "@/lib/tenant";
 import type { StoreSettings } from "@/lib/types";
 
 const globalForSettings = globalThis as unknown as {
@@ -8,9 +9,9 @@ const globalForSettings = globalThis as unknown as {
 };
 type StoreConfigModel = {
   upsert: (args: {
-    where: { id: string };
+    where: { storeId: string };
     create: {
-      id: string;
+      storeId: string;
       storeName: string;
       primaryColor: string;
       logoUrl: string | null;
@@ -28,7 +29,7 @@ type StoreConfigModel = {
     closeTime: string;
   }>;
   update: (args: {
-    where: { id: string };
+    where: { storeId: string };
     data: {
       storeName: string;
       primaryColor: string;
@@ -59,13 +60,14 @@ function defaultSettings(): StoreSettings {
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
+  const store = await getCurrentStore();
   if (isDatabaseEnabled()) {
     try {
       const prismaAny = db as unknown as { storeConfig: StoreConfigModel };
       const config = await prismaAny.storeConfig.upsert({
-        where: { id: "default" },
+        where: { storeId: store.id },
         create: {
-          id: "default",
+          storeId: store.id,
           ...defaultSettings(),
         },
         update: {},
@@ -90,6 +92,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 export async function updateStoreSettings(
   input: Partial<StoreSettings>,
 ): Promise<StoreSettings> {
+  const store = await getCurrentStore();
   const current = await getStoreSettings();
   const next: StoreSettings = {
     storeName: input.storeName?.trim() || current.storeName,
@@ -113,7 +116,7 @@ export async function updateStoreSettings(
     try {
       const prismaAny = db as unknown as { storeConfig: StoreConfigModel };
       return await prismaAny.storeConfig.update({
-        where: { id: "default" },
+        where: { storeId: store.id },
         data: next,
       });
     } catch {

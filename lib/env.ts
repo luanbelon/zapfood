@@ -25,3 +25,11 @@ export function getAdminEmail(): string {
 export function getStoreCode(): string {
   return process.env.STORE_CODE?.trim() || "1234";
 }
+
+export function getMasterEmail(): string {
+  return process.env.MASTER_EMAIL?.trim() || "master@zapfood.com";
+}
+
+export function getMasterPassword(): string {
+  return process.env.MASTER_PASSWORD?.trim() || "troque-master";
+}
