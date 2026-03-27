@@ -41,11 +41,34 @@ export async function getCurrentStore(): Promise<TenantStore> {
   const prismaAny = db as unknown as {
     store: {
       findUnique: (args: { where: { subdomain: string } }) => Promise<TenantStore | null>;
+      findFirst: (args: {
+        where?: { subdomain?: string; active?: boolean };
+        orderBy?: { createdAt: "asc" | "desc" };
+      }) => Promise<TenantStore | null>;
     };
   };
-  const store = await prismaAny.store.findUnique({ where: { subdomain } });
-  if (!store) {
-    throw new Error(`Store not found for subdomain: ${subdomain}`);
-  }
-  return store;
+  const byHost = await prismaAny.store.findUnique({ where: { subdomain } });
+  if (byHost?.active) return byHost;
+
+  const fallbackSubdomain =
+    process.env.DEFAULT_STORE_SUBDOMAIN?.trim().toLowerCase() || DEFAULT_DEV_SUBDOMAIN;
+  const byFallback = await prismaAny.store.findFirst({
+    where: { subdomain: fallbackSubdomain, active: true },
+  });
+  if (byFallback) return byFallback;
+
+  const firstActive = await prismaAny.store.findFirst({
+    where: { active: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (firstActive) return firstActive;
+
+  // For master routes or first-time setup, avoid crashing when no store exists yet.
+  return {
+    id: "store-bootstrap",
+    name: "Loja Bootstrap",
+    code: "BOOT01",
+    subdomain: fallbackSubdomain,
+    active: true,
+  };
 }
