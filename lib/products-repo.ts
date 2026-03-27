@@ -140,8 +140,12 @@ export async function deleteProduct(id: string): Promise<boolean> {
   }
   const items = getMockStore(store.id);
   const before = items.length;
-  globalForMock.zapfoodMockProducts[store.id] = items.filter((p) => p.id !== id);
-  return globalForMock.zapfoodMockProducts[store.id].length < before;
+  const next = items.filter((p) => p.id !== id);
+  if (!globalForMock.zapfoodMockProducts) {
+    globalForMock.zapfoodMockProducts = {};
+  }
+  globalForMock.zapfoodMockProducts[store.id] = next;
+  return next.length < before;
 }
 
 export async function countProducts(): Promise<{ total: number; active: number; inactive: number }> {
